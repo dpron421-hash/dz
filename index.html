@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Список студентов</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            margin: 0;
+            padding: 30px 15px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+        }
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        input {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button.add-btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button.add-btn:hover { background: #5568d3; }
+
+        h2 {
+            margin-top: 30px;
+            color: #444;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .student {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+        }
+        .student-info strong {
+            color: #333;
+            font-size: 16px;
+        }
+        .student-info small {
+            color: #777;
+            display: block;
+            margin-top: 3px;
+        }
+        .delete-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .delete-btn:hover { background: #e63946; }
+        .empty {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Студенты группы</h1>
+
+        <div class="form-group">
+            <input type="text" id="firstname" placeholder="Имя">
+            <input type="text" id="lastname" placeholder="Фамилия">
+            <input type="text" id="group_name" placeholder="Группа (напр. ИС-21)">
+        </div>
+        <button class="add-btn" onclick="addStudent()">➕ Добавить студента</button>
+
+        <h2>Список:</h2>
+        <div id="studentsList">Загрузка...</div>
+    </div>
+
+    <script>
+        window.onload = loadStudents;
+
+        async function loadStudents() {
+            try {
+                const res = await fetch('/api/students');
+                const students = await res.json();
+                const list = document.getElementById('studentsList');
+
+                if (students.length === 0) {
+                    list.innerHTML = '<p class="empty">Пока никого нет 😴</p>';
+                    return;
+                }
+
+                list.innerHTML = students.map(s => `
+                    <div class="student">
+                        <div class="student-info">
+                            <strong>${s.lastname} ${s.firstname}</strong>
+                            <small>Группа: ${s.group_name}</small>
+                        </div>
+                        <button class="delete-btn" onclick="deleteStudent(${s.id})">🗑</button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                document.getElementById('studentsList').innerHTML =
+                    '<p class="empty">Ошибка загрузки 😢</p>';
+            }
+        }
+
+        async function addStudent() {
+            const firstname = document.getElementById('firstname').value.trim();
+            const lastname = document.getElementById('lastname').value.trim();
+            const group_name = document.getElementById('group_name').value.trim();
+
+            if (!firstname || !lastname || !group_name) {
+                alert('Заполни все поля!');
+                return;
+            }
+
+            await fetch('/api/students', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ firstname, lastname, group_name })
+            });
+
+            document.getElementById('firstname').value = '';
+            document.getElementById('lastname').value = '';
+            document.getElementById('group_name').value = '';
+
+            loadStudents();
+        }
+
+        async function deleteStudent(id) {
+            if (!confirm('Удалить студента?')) return;
+            await fetch('/api/students/' + id, { method: 'DELETE' });
+            loadStudents();
+        }
+    </script>
+</body>
+</html>
